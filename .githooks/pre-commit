@@ -1,0 +1,29 @@
+#!/bin/sh
+# skillforge pre-commit hook: block a commit that would leak private/internal data.
+# Enable once with:  git config core.hooksPath .githooks
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+# Pick an interpreter that actually runs. On Windows, `command -v python3` can
+# resolve to a Microsoft Store alias stub that exits non-zero, so validate each.
+PY=""
+for c in python3 python py; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c "import sys" >/dev/null 2>&1; then
+    PY="$c"; break
+  fi
+done
+if [ -z "$PY" ]; then
+  echo "pre-commit: python not found; skipping leak scan (CI still enforces it)." >&2
+  exit 0
+fi
+
+echo "pre-commit: running leak scan..."
+if ! "$PY" "$ROOT/scripts/leak_scan.py"; then
+  echo "" >&2
+  echo "pre-commit: BLOCKED. Leak scan found private/internal data." >&2
+  echo "Fix the findings above, or add real names to scripts/company-terms.txt" >&2
+  echo "(gitignored) if the catch was a company term. Then commit again." >&2
+  exit 1
+fi
+echo "pre-commit: leak scan clean."
+exit 0

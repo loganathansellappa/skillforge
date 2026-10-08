@@ -1,0 +1,27 @@
+#!/bin/sh
+# skillforge pre-push hook: run the full gate before anything leaves your machine.
+# Enable once with:  git config core.hooksPath .githooks
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+# Pick an interpreter that actually runs. On Windows, `command -v python3` can
+# resolve to a Microsoft Store alias stub that exits non-zero, so validate each.
+PY=""
+for c in python3 python py; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c "import sys" >/dev/null 2>&1; then
+    PY="$c"; break
+  fi
+done
+if [ -z "$PY" ]; then
+  echo "pre-push: python not found; skipping gate (CI still enforces it)." >&2
+  exit 0
+fi
+
+echo "pre-push: running verify gate (leak scan + frontmatter + tests)..."
+if ! "$PY" "$ROOT/scripts/verify.py"; then
+  echo "" >&2
+  echo "pre-push: BLOCKED. Gate failed. Fix the findings above, then push again." >&2
+  exit 1
+fi
+echo "pre-push: gate passed."
+exit 0

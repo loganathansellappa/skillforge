@@ -1,0 +1,22 @@
+# skillforge — gitignore
+
+# Local, never-committed denylist of real company/product/host/user names the
+# leak scanner should catch. Keeping it OUT of the repo means the names never
+# ship either. See CONTRIBUTING.md.
+scripts/company-terms.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local scratch
+*.log
+.secrets/
