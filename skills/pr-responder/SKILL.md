@@ -5,10 +5,12 @@ description: >-
   tells. Two modes: respond (reviewers commented on your PR, so read the cited
   code, draft a reply, and post it after you confirm) and review (you were asked
   to review a PR, so read the diff, show findings first, then post them after you
-  confirm). Every reply and comment passes a humanize gate that strips generated
-  punctuation and rejects text that still reads as generated. Works on GitHub,
-  GitLab, and Bitbucket through their CLIs or REST. Use when you need to answer PR
-  feedback or post a review and you do not want it to sound like a bot.
+  confirm). Every reply and comment passes a grounding gate that rejects a draft
+  citing a file or commit the PR does not contain, and a humanize gate that strips
+  generated punctuation and rejects text that still reads as generated. Works on
+  GitHub, GitLab, and Bitbucket through their CLIs or REST. Use when you need to
+  answer PR feedback or post a review and you do not want it to sound like a bot or
+  point at made-up code.
 ---
 
 # pr-responder
@@ -55,6 +57,31 @@ Voice that passes: short, specific, and about the code. "Good catch. The cache h
 no expiry, so I added a one minute TTL and a test." Voice that gets rejected:
 `I've carefully reviewed your valuable feedback and ensured a robust solution.`
 
+## The grounding gate (so the reply points at real code)
+
+A reply can read perfectly human and still cite a file that is not in the PR, the
+wrong file, or a commit from another branch. A reader spots that at once and stops
+trusting the rest. Run the grounding gate before the humanize gate to catch it:
+
+```bash
+# capture the PR's real changed files with your host's list command (hosts.md):
+gh pr diff <pr> --name-only > pr-files.txt           # GitHub example
+
+# then check the draft cites only files that belong to this PR:
+echo "your draft reply" | python <skilldir>/ground.py --files-from pr-files.txt
+```
+
+It exits 0 when the draft cites nothing or everything it cites belongs to the PR,
+and exits 4 when it cites a file (or, with `--strict`, a commit sha) that does not.
+On exit 4, fix the reference. Do not post a reply that points at code the PR does
+not contain. Pass `--repo-root .` to also accept a file you reference for context
+that exists in your checkout but is not in the diff.
+
+**What the grounding gate cannot do:** it does not prove the reply is correct or
+that it answers the comment. That stays your job. Read the cited `file:line` and
+make the reply address the point. The gate removes made-up references, not wrong
+reasoning.
+
 ## Mode 1 - respond: reviewers commented on your PR
 
 1. Pull the open comments on the PR (see `references/hosts.md` for the exact
@@ -64,7 +91,8 @@ no expiry, so I added a one minute TTL and a test." Voice that gets rejected:
    is right. Quote the `file:line` you read. Do not trust the claim on its own.
 3. Fix the valid ones in the code. Write a short rebuttal for the ones that do not
    apply, and cite the line that shows why.
-4. Draft a reply for each comment. Run every draft through the humanize gate.
+4. Draft a reply for each comment. Run every draft through the grounding gate
+   (does it cite only files in this PR?) and then the humanize gate.
 5. Show the user the drafts and the diff. Post nothing yet.
 6. After the user confirms, commit on the PR branch (never the base branch), push,
    then post each reply and resolve the threads whose fix you pushed. Leave a
@@ -77,7 +105,7 @@ no expiry, so I added a one minute TTL and a test." Voice that gets rejected:
    they matter: blocking, worth fixing, minor.
 3. Show the user the full list first. Post nothing yet.
 4. After the user confirms which findings to post, and whether each is inline or
-   general, run each one through the humanize gate.
+   general, run each one through the grounding gate and then the humanize gate.
 5. Post the ones that passed. Inline findings attach to a file and line. General
    findings go on the PR itself. See `references/hosts.md` for the commands.
 
@@ -85,6 +113,8 @@ no expiry, so I added a one minute TTL and a test." Voice that gets rejected:
 
 - Post only through the humanize gate. If `humanize.py` exits 3, rewrite, do not
   override.
+- Ground every reply first. If `ground.py` exits 4, fix the cited file or sha, do
+  not post a reply that points at code this PR does not contain.
 - Confirm with the user before any commit, push, or comment.
 - Never push a protected branch (the base branch of the PR).
 - Keep the token in your environment or in your host CLI's own auth. Do not print
@@ -103,7 +133,12 @@ no expiry, so I added a one minute TTL and a test." Voice that gets rejected:
 
 - `references/setup.md` - tokens, host CLIs, and installing slophound.
 - `references/hosts.md` - the list, reply, comment, and resolve commands for
-  GitHub, GitLab, and Bitbucket.
+  GitHub, GitLab, and Bitbucket, plus how to capture a PR's changed files for the
+  grounding gate.
+- `ground.py` - the grounding gate: rejects a draft that cites a file or commit the
+  PR does not contain. Host-neutral, stdlib only, no network.
+- `humanize.py` - the humanize gate: strips generated punctuation and lints the
+  rest so the text reads like a person wrote it.
 - `hooks/` - an optional `preToolUse` backstop that enforces the gate's punctuation
   layer deterministically on hosts that support hooks.
 - `examples/` - fully fictional respond and review walkthroughs.

@@ -80,3 +80,26 @@ with a `parent.id` for replies and a `state: RESOLVED` update to resolve.
 Whatever host you use, the draft goes through the gate before it reaches any of
 these commands. The gate is the point of the skill, and it runs the same way
 everywhere.
+
+## Capturing a PR's changed files (for the grounding gate)
+
+`ground.py` compares what a draft cites against the PR's real changed files, which
+you fetch with your host's own command and save one path per line:
+
+```bash
+# GitHub
+gh pr diff <pr> --name-only > pr-files.txt
+
+# GitLab (project id and mr iid)
+glab api projects/{id}/merge_requests/{iid}/changes \
+  | python -c "import json,sys;print('\n'.join(c['new_path'] for c in json.load(sys.stdin)['changes']))" > pr-files.txt
+
+# Bitbucket Cloud
+curl -H "Authorization: ******" \
+  "https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}/pullrequests/{pr}/diffstat" \
+  | python -c "import json,sys;print('\n'.join(v['new']['path'] for v in json.load(sys.stdin)['values'] if v.get('new')))" > pr-files.txt
+```
+
+For the stricter sha check, save the PR's commit shas one per line (for example
+`gh pr view <pr> --json commits -q '.commits[].oid'`) and pass `--shas-from` with
+`--strict`.
