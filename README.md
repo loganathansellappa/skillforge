@@ -23,6 +23,7 @@ CI. See [CONTRIBUTING.md](CONTRIBUTING.md).
 | Skill | Solves | Docs |
 | ----- | ------ | ---- |
 | [rca-tracer](skills/rca-tracer/) | Root-cause analysis across one or many repositories. Traces a symptom to a cited `file:line` and names the layer to fix, without guessing. Reads code remotely from any Git host (GitHub, GitLab, Bitbucket) with a read-level token, no clone needed, or from a local checkout when present. | [README](skills/rca-tracer/README.md) · [SKILL](skills/rca-tracer/SKILL.md) |
+| [pr-responder](skills/pr-responder/) | Review pull requests and answer review comments in a human voice, with no AI tells. Reads the cited code, drafts a reply or a review, and runs every post through a humanize gate (strips generated punctuation, then lints with slophound) so nothing goes out sounding like a bot. Works on GitHub, GitLab, and Bitbucket. | [README](skills/pr-responder/README.md) · [SKILL](skills/pr-responder/SKILL.md) |
 
 More skills will land in `skills/`. Each one keeps the same shape, so the install
 steps below cover all of them.

@@ -20,3 +20,6 @@ Thumbs.db
 # Local scratch
 *.log
 .secrets/
+
+# Session handoff note (local only, never shipped)
+CONTEXT.md
